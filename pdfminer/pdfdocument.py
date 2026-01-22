@@ -922,10 +922,10 @@ class PDFDocument:
                     return None
             if "Names" in d:
                 objs = list_value(d["Names"])
-                names = dict(
-                    cast(Iterator[tuple[str | bytes, Any]], choplist(2, objs)),
-                )
-                return names[key]
+                for i in range(0, len(objs), 2):
+                    if objs[i] == key:
+                        return objs[i + 1]
+                raise KeyError(key)
             if "Kids" in d:
                 for c in list_value(d["Kids"]):
                     v = lookup(dict_value(c))
