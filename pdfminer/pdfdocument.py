@@ -320,9 +320,11 @@ class PDFXRefStream(PDFBaseXRef):
         assert self.fl1 is not None and self.fl2 is not None and self.fl3 is not None
         offset = self.entlen * index
         ent = self.data[offset : offset + self.entlen]
-        f1 = nunpack(ent[: self.fl1], 1)
-        f2 = nunpack(ent[self.fl1 : self.fl1 + self.fl2])
-        f3 = nunpack(ent[self.fl1 + self.fl2 :])
+        fl1_end = self.fl1
+        fl2_start = fl1_end + self.fl2
+        f1 = int.from_bytes(ent[:fl1_end], byteorder="big", signed=False) if fl1_end else 1
+        f2 = int.from_bytes(ent[fl1_end:fl2_start], byteorder="big", signed=False) if self.fl2 else 0
+        f3 = int.from_bytes(ent[fl2_start:], byteorder="big", signed=False) if self.fl3 else 0
         if f1 == 1:
             return (None, f2, f3)
         elif f1 == 2:
