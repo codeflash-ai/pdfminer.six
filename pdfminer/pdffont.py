@@ -920,6 +920,20 @@ class PDFFont:
         if self.descent > 0:
             self.descent = -self.descent
 
+
+        # Precompute numeric widths split by key type to avoid repeated
+        # safe_float conversions on every char lookup.
+        self._widths_int: dict[int, float] = {}
+        self._widths_str: dict[str, float] = {}
+        for k, v in self.widths.items():
+            fv = safe_float(v)
+            if fv is None:
+                continue
+            if isinstance(k, int):
+                self._widths_int[k] = fv
+            elif isinstance(k, str):
+                self._widths_str[k] = fv
+
     def __repr__(self) -> str:
         return "<PDFFont>"
 
@@ -955,13 +969,13 @@ class PDFFont:
     def char_width(self, cid: int) -> float:
         # Because character widths may be mapping either IDs or strings,
         # we try to lookup the character ID first, then its str equivalent.
-        cid_width = safe_float(self.widths.get(cid))
+        cid_width = self._widths_int.get(cid)
         if cid_width is not None:
             return cid_width * self.hscale
 
         try:
             str_cid = self.to_unichr(cid)
-            cid_width = safe_float(self.widths.get(str_cid))
+            cid_width = self._widths_str.get(str_cid)
             if cid_width is not None:
                 return cid_width * self.hscale
 
