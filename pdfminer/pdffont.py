@@ -173,46 +173,72 @@ IDENTITY_ENCODER = {
 
 def getdict(data: bytes) -> dict[int, list[float | int]]:
     d: dict[int, list[float | int]] = {}
-    fp = BytesIO(data)
+    # use index walk over the bytes to avoid BytesIO.read and ord overhead
+    n = len(data)
+    i = 0
     stack: list[float | int] = []
-    while 1:
-        c = fp.read(1)
-        if not c:
-            break
-        b0 = ord(c)
+    # local aliases for speed
+    nibs = NIBBLES
+    unpack = struct.unpack
+    mv = data  # bytes supports indexing and slicing
+    # helper message to match ord(b'') TypeError behavior in original implementation
+    ord_empty_msg = "ord() expected a character, but string of length 0 found"
+    while i < n:
+        b0 = mv[i]
+        i += 1
         if b0 <= 21:
             d[b0] = stack
             stack = []
             continue
         if b0 == 30:
-            s = ""
+            # build parts and join at the end to avoid repeated string reallocations
+            parts: list[str] = []
             loop = True
             while loop:
-                b = ord(fp.read(1))
-                for n in (b >> 4, b & 15):
-                    if n == 15:
+                if i >= n:
+                    # match the original ord(fp.read(1)) behavior when read returns empty
+                    raise TypeError(ord_empty_msg)
+                b = mv[i]
+                i += 1
+                # process high nibble then low nibble
+                for nibb in (b >> 4, b & 15):
+                    if nibb == 15:
                         loop = False
                     else:
-                        nibble = NIBBLES[n]
+                        nibble = nibs[nibb]
                         assert nibble is not None
-                        s += nibble
+                        parts.append(nibble)
+            s = "".join(parts)
             value = float(s)
-        elif b0 >= 32 and b0 <= 246:
+        elif 32 <= b0 <= 246:
             value = b0 - 139
         else:
-            b1 = ord(fp.read(1))
-            if b0 >= 247 and b0 <= 250:
+            # need one more byte (b1)
+            if i >= n:
+                raise TypeError(ord_empty_msg)
+            b1 = mv[i]
+            i += 1
+            if 247 <= b0 <= 250:
                 value = ((b0 - 247) << 8) + b1 + 108
-            elif b0 >= 251 and b0 <= 254:
+            elif 251 <= b0 <= 254:
                 value = -((b0 - 251) << 8) - b1 - 108
             else:
-                b2 = ord(fp.read(1))
+                # need another byte (b2)
+                if i >= n:
+                    raise TypeError(ord_empty_msg)
+                b2 = mv[i]
+                i += 1
                 if b1 >= 128:
                     b1 -= 256
                 if b0 == 28:
                     value = b1 << 8 | b2
                 else:
-                    value = b1 << 24 | b2 << 16 | struct.unpack(">H", fp.read(2))[0]
+                    # read next two bytes for unpack(">H", ..)
+                    # let struct.unpack raise the same struct.error if less than 2 bytes available
+                    raw = mv[i:i+2]
+                    # perform the unpack (may raise struct.error on short buffer)
+                    value = b1 << 24 | b2 << 16 | unpack(">H", raw)[0]
+                    i += len(raw)
         stack.append(value)
     return d
 
