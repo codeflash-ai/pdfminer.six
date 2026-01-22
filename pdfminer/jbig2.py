@@ -1,10 +1,14 @@
 import math
 import os
 from collections.abc import Iterable
-from struct import calcsize, pack, unpack
+from struct import Struct, calcsize, pack, unpack
 from typing import BinaryIO, ClassVar, cast
 
 from pdfminer.pdfexceptions import PDFValueError
+
+_ALLOWED_FORMATS = frozenset({">B", ">I", ">L"})
+# Precompile Struct instances so formats are parsed once at module import time.
+_STRUCTS: dict[str, Struct] = {fmt: Struct(fmt) for fmt in _ALLOWED_FORMATS}
 
 # segment structure base
 SEG_STRUCT = [
@@ -62,8 +66,8 @@ def mask_value(mask: int, value: int) -> int:
 
 
 def unpack_int(format: str, buffer: bytes) -> int:
-    assert format in {">B", ">I", ">L"}
-    [result] = cast(tuple[int], unpack(format, buffer))
+    assert format in _ALLOWED_FORMATS
+    (result,) = _STRUCTS[format].unpack(buffer)
     return result
 
 
