@@ -920,6 +920,10 @@ class PDFFont:
         if self.descent > 0:
             self.descent = -self.descent
 
+        # Cache height calculations
+        self._bbox_height = self.bbox[3] - self.bbox[1]
+        self._ascent_descent_diff = self.ascent - self.descent
+
     def __repr__(self) -> str:
         return "<PDFFont>"
 
@@ -947,9 +951,9 @@ class PDFFont:
         return w * self.hscale
 
     def get_height(self) -> float:
-        h = self.bbox[3] - self.bbox[1]
+        h = self._bbox_height
         if h == 0:
-            h = self.ascent - self.descent
+            h = self._ascent_descent_diff
         return h * self.vscale
 
     def char_width(self, cid: int) -> float:
