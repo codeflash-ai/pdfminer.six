@@ -145,7 +145,8 @@ class UnicodeMap(CMapBase):
         return "<UnicodeMap: {}>".format(self.attrs.get("CMapName"))
 
     def get_unichr(self, cid: int) -> str:
-        log.debug("get_unichr: %r, %r", self, cid)
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("get_unichr: %r, %r", self, cid)
         return self.cid2unichr[cid]
 
     def dump(self, out: TextIO = sys.stdout) -> None:
