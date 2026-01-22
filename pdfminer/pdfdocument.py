@@ -46,6 +46,8 @@ from pdfminer.utils import (
     unpad_aes,
 )
 
+_DEFAULT_BACKEND = default_backend()
+
 log = logging.getLogger(__name__)
 
 
@@ -526,12 +528,9 @@ class PDFStandardSecurityHandlerV4(PDFStandardSecurityHandler):
 
     def decrypt_aes128(self, objid: int, genno: int, data: bytes) -> bytes:
         assert self.key is not None
-        key = (
-            self.key
-            + struct.pack("<L", objid)[:3]
-            + struct.pack("<L", genno)[:2]
-            + b"sAlT"
-        )
+        # Pack both objid and genno in one call and slice to avoid two pack calls.
+        packed = struct.pack("<LL", objid, genno)
+        key = self.key + packed[:3] + packed[4:6] + b"sAlT"
         hash = md5(key)
         key = hash.digest()[: min(len(key), 16)]
         initialization_vector = data[:16]
@@ -539,7 +538,7 @@ class PDFStandardSecurityHandlerV4(PDFStandardSecurityHandler):
         cipher = Cipher(
             algorithms.AES(key),
             modes.CBC(initialization_vector),
-            backend=default_backend(),
+            backend=_DEFAULT_BACKEND,
         )  # type: ignore
         plaintext = cipher.decryptor().update(ciphertext)  # type: ignore
         return unpad_aes(plaintext)
