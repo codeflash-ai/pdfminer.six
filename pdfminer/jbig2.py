@@ -62,9 +62,7 @@ def mask_value(mask: int, value: int) -> int:
 
 
 def unpack_int(format: str, buffer: bytes) -> int:
-    assert format in {">B", ">I", ">L"}
-    [result] = cast(tuple[int], unpack(format, buffer))
-    return result
+    return unpack(format, buffer)[0]
 
 
 JBIG2SegmentFlags = dict[str, int | bool]
