@@ -79,6 +79,7 @@ class LZWDecoder:
         return x
 
     def run(self) -> Iterator[bytes]:
+        debug_enabled = logger.isEnabledFor(logging.DEBUG)
         while 1:
             try:
                 code = self.readbits(self.nbits)
@@ -91,16 +92,20 @@ class LZWDecoder:
                 break
             yield x
 
-            logger.debug(
-                "nbits=%d, code=%d, output=%r, table=%r",
-                self.nbits,
-                code,
-                x,
-                self.table[258:],
-            )
+            if debug_enabled:
+                logger.debug(
+                    "nbits=%d, code=%d, output=%r, table=%r",
+                    self.nbits,
+                    code,
+                    x,
+                    self.table[258:],
+                )
 
 
 def lzwdecode(data: bytes) -> bytes:
     fp = BytesIO(data)
     s = LZWDecoder(fp).run()
-    return b"".join(s)
+    result = bytearray()
+    for chunk in s:
+        result.extend(chunk)
+    return bytes(result)
