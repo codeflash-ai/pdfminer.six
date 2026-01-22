@@ -217,15 +217,13 @@ class JBIG2StreamWriter:
             self.stream.write(data)
             data_len += len(data)
 
-            seg_num = cast(int | None, segment["number"])
+            seg_num = segment["number"]
+
 
             if fix_last_page:
-                seg_page = cast(int, segment.get("page_assoc"))
+                seg_page = segment.get("page_assoc")
 
-                if (
-                    cast(JBIG2SegmentFlags, segment["flags"])["type"]
-                    == SEG_TYPE_END_OF_PAGE
-                ):
+                if segment["flags"]["type"] == SEG_TYPE_END_OF_PAGE:
                     current_page = None
                 elif seg_page:
                     current_page = seg_page
@@ -243,9 +241,9 @@ class JBIG2StreamWriter:
         segments: Iterable[JBIG2Segment],
         fix_last_page: bool = True,
     ) -> int:
-        header = FILE_HEADER_ID
-        header_flags = FILE_HEAD_FLAG_SEQUENTIAL
-        header += pack(">B", header_flags)
+        header = FILE_HEADER_ID + pack(">B", FILE_HEAD_FLAG_SEQUENTIAL)
+        # The embedded JBIG2 files in a PDF always
+        # only have one page
         # The embedded JBIG2 files in a PDF always
         # only have one page
         number_of_pages = pack(">L", 1)
@@ -257,7 +255,8 @@ class JBIG2StreamWriter:
 
         seg_num = 0
         for segment in segments:
-            seg_num = cast(int, segment["number"])
+            seg_num = segment["number"]
+
 
         seg_num_offset = 2 if fix_last_page else 1
         eof_segment = self.get_eof_segment(seg_num + seg_num_offset)
@@ -269,15 +268,18 @@ class JBIG2StreamWriter:
         return data_len
 
     def encode_segment(self, segment: JBIG2Segment) -> bytes:
-        data = b""
+        # Build pieces and join once to avoid repeated bytes concatenation.
+        parts: list[bytes] = []
+        p = pack
         for field_format, name in SEG_STRUCT:
             value = segment.get(name)
             encoder = getattr(self, f"encode_{name}", None)
             if callable(encoder):
                 field = encoder(value, segment)
             else:
-                field = pack(field_format, value)
-            data += field
+                field = p(field_format, value)
+            parts.append(field)
+        data = b"".join(parts)
         return data
 
     def encode_flags(self, value: JBIG2SegmentFlags, segment: JBIG2Segment) -> bytes:
