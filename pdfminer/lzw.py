@@ -21,6 +21,7 @@ class LZWDecoder:
         # NB: self.table stores None only in indices 256 and 257
         self.table: list[bytes | None] = []
         self.prevbuf: bytes | None = None
+        self._init_bytes = tuple(bytes((c,)) for c in range(256))
 
     def readbits(self, bits: int) -> int:
         v = 0
@@ -50,7 +51,7 @@ class LZWDecoder:
     def feed(self, code: int) -> bytes:
         x = b""
         if code == 256:
-            self.table = [bytes((c,)) for c in range(256)]  # 0-255
+            self.table = list(self._init_bytes)  # 0-255
             self.table.append(None)  # 256
             self.table.append(None)  # 257
             self.prevbuf = b""
