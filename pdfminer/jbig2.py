@@ -42,7 +42,7 @@ def bit_set(bit_pos: int, value: int) -> bool:
 
 
 def check_flag(flag: int, value: int) -> bool:
-    return bool(flag & value)
+    return (flag & value) != 0
 
 
 def masked_value(mask: int, value: int) -> int:
