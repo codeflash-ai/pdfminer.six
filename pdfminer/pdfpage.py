@@ -64,18 +64,23 @@ class PDFPage:
         self.pageid = pageid
         self.attrs = dict_value(attrs)
         self.label = label
-        self.lastmod = resolve1(self.attrs.get("LastModified"))
+
+        # Cache attrs locally to avoid repeated attribute/dict lookups
+        attrs_local = self.attrs
+        get = attrs_local.get
+
+        self.lastmod = resolve1(get("LastModified"))
         self.resources: dict[object, object] = resolve1(
-            self.attrs.get("Resources", {}),
+            get("Resources", {}),
         )
 
-        self.mediabox = self._parse_mediabox(self.attrs.get("MediaBox"))
-        self.cropbox = self._parse_cropbox(self.attrs.get("CropBox"), self.mediabox)
-        self.contents = self._parse_contents(self.attrs.get("Contents"))
+        self.mediabox = self._parse_mediabox(get("MediaBox"))
+        self.cropbox = self._parse_cropbox(get("CropBox"), self.mediabox)
+        self.contents = self._parse_contents(get("Contents"))
 
-        self.rotate = (int_value(self.attrs.get("Rotate", 0)) + 360) % 360
-        self.annots = self.attrs.get("Annots")
-        self.beads = self.attrs.get("B")
+        self.rotate = (int_value(get("Rotate", 0)) + 360) % 360
+        self.annots = get("Annots")
+        self.beads = get("B")
 
     def __repr__(self) -> str:
         return f"<PDFPage: Resources={self.resources!r}, MediaBox={self.mediabox!r}>"
@@ -216,9 +221,9 @@ class PDFPage:
             return mediabox
 
     def _parse_contents(self, value: Any) -> list[Any]:
-        contents: list[Any] = []
-        if value is not None:
-            contents = resolve1(value)
-            if not isinstance(contents, list):
-                contents = [contents]
-        return contents
+        if value is None:
+            return []
+        contents = resolve1(value)
+        if isinstance(contents, list):
+            return contents
+        return [contents]
