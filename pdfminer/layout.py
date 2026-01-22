@@ -368,7 +368,8 @@ class LTChar(LTComponent, LTText):
         self.graphicstate = graphicstate
         self.adv = textwidth * fontsize * scaling
         # compute the boundary rectangle.
-        if font.is_vertical():
+        is_vertical = font.is_vertical()
+        if is_vertical:
             # vertical
             assert isinstance(textdisp, tuple)
             (vx, vy) = textdisp
@@ -387,7 +388,7 @@ class LTChar(LTComponent, LTText):
         if y1 < y0:
             (y0, y1) = (y1, y0)
         LTComponent.__init__(self, (x0, y0, x1, y1))
-        if font.is_vertical():
+        if is_vertical:
             self.size = self.width
         else:
             self.size = self.height
