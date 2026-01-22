@@ -384,11 +384,11 @@ class PDFStandardSecurityHandler:
             return Arcfour(key).encrypt(self.PASSWORD_PADDING)  # 2
         else:
             # Algorithm 3.5
-            hash = md5(self.PASSWORD_PADDING)  # 2
-            hash.update(self.docid[0])  # 3
+            hash = md5(self.PASSWORD_PADDING + self.docid[0])  # 2 & 3 combined
             result = Arcfour(key).encrypt(hash.digest())  # 4
             for i in range(1, 20):  # 5
-                k = b"".join(bytes((c ^ i,)) for c in iter(key))
+                # build the XOR'ed key directly as bytes for speed
+                k = bytes(c ^ i for c in key)
                 result = Arcfour(k).encrypt(result)
             result += result  # 6
             return result
