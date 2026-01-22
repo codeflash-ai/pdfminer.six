@@ -376,7 +376,7 @@ class PDFStandardSecurityHandler:
         return bool(self.p & 8)
 
     def is_extractable(self) -> bool:
-        return bool(self.p & 16)
+        return (self.p & 16) != 0
 
     def compute_u(self, key: bytes) -> bytes:
         if self.r == 2:
