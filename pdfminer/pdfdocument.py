@@ -370,7 +370,7 @@ class PDFStandardSecurityHandler:
             raise PDFPasswordIncorrect
 
     def is_printable(self) -> bool:
-        return bool(self.p & 4)
+        return self.p & 4 != 0
 
     def is_modifiable(self) -> bool:
         return bool(self.p & 8)
