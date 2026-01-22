@@ -4,6 +4,10 @@ import re
 from base64 import a85decode
 from binascii import unhexlify
 
+_identity_table = bytes(range(256))
+
+_whitespace_chars = b" \t\n\r\x0b\x0c"
+
 start_re = re.compile(rb"^\s*<?\s*~\s*")
 end_re = re.compile(rb"\s*~\s*>?\s*$")
 
@@ -39,7 +43,7 @@ def asciihexdecode(data: bytes) -> bytes:
     the EOD marker after reading an odd number of hexadecimal digits, it
     will behave as if a 0 followed the last digit.
     """
-    data = bws_re.sub(b"", data)
+    data = data.translate(_identity_table, _whitespace_chars)
     idx = data.find(b">")
     if idx != -1:
         data = data[:idx]
