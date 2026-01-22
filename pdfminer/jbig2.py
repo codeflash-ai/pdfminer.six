@@ -346,9 +346,8 @@ class JBIG2StreamWriter:
         return pack(flags_format, *flags)
 
     def encode_data_length(self, value: int, segment: JBIG2Segment) -> bytes:
-        data = pack(">L", value)
-        data += cast(bytes, segment["raw_data"])
-        return data
+        raw_data = segment["raw_data"]
+        return pack(">L", value) + raw_data
 
     def get_eop_segment(self, seg_number: int, page_number: int) -> JBIG2Segment:
         return {
