@@ -54,11 +54,11 @@ def masked_value(mask: int, value: int) -> int:
 
 
 def mask_value(mask: int, value: int) -> int:
-    for bit_pos in range(31):
-        if bit_set(bit_pos, mask):
-            return (value & (mask >> bit_pos)) << bit_pos
-
-    raise PDFValueError("Invalid mask or value")
+    if mask == 0:
+        raise PDFValueError("Invalid mask or value")
+    
+    bit_pos = (mask & -mask).bit_length() - 1
+    return (value & (mask >> bit_pos)) << bit_pos
 
 
 def unpack_int(format: str, buffer: bytes) -> int:
@@ -325,7 +325,8 @@ class JBIG2StreamWriter:
                 ret_byte = 0
                 ret_part = retain_segments[byte_index * 8 : byte_index * 8 + 8]
                 for bit_pos, ret_seg in enumerate(ret_part):
-                    ret_byte |= 1 << bit_pos if ret_seg else ret_byte
+                    if ret_seg:
+                        ret_byte |= 1 << bit_pos
 
                 flags.append(ret_byte)
 
@@ -339,9 +340,8 @@ class JBIG2StreamWriter:
         else:
             ref_format = "L"
 
-        for ref in ref_segments:
-            flags_format += ref_format
-            flags.append(ref)
+        flags_format += ref_format * len(ref_segments)
+        flags.extend(ref_segments)
 
         return pack(flags_format, *flags)
 
