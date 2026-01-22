@@ -54,8 +54,12 @@ def masked_value(mask: int, value: int) -> int:
 
 
 def mask_value(mask: int, value: int) -> int:
+    # Fast path for SEG_TYPE_MASK
+    if mask == SEG_TYPE_MASK:
+        return value & mask
+    
     for bit_pos in range(31):
-        if bit_set(bit_pos, mask):
+        if (mask >> bit_pos) & 1:
             return (value & (mask >> bit_pos)) << bit_pos
 
     raise PDFValueError("Invalid mask or value")
