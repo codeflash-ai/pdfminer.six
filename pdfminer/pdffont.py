@@ -930,7 +930,9 @@ class PDFFont:
         return False
 
     def decode(self, bytes: bytes) -> Iterable[int]:
-        return bytearray(bytes)  # map(ord, bytes)
+        # Avoid allocating a new bytearray on each call. bytes, bytearray and
+        # memoryview are already iterable and yield ints when iterated.
+        return bytes
 
     def get_ascent(self) -> float:
         """Ascent above the baseline, in text space units"""
