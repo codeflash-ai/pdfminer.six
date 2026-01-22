@@ -920,6 +920,10 @@ class PDFFont:
         if self.descent > 0:
             self.descent = -self.descent
 
+
+        # Cache the bbox width calculation for get_width()
+        self._bbox_width = self.bbox[2] - self.bbox[0]
+
     def __repr__(self) -> str:
         return "<PDFFont>"
 
@@ -941,7 +945,7 @@ class PDFFont:
         return self.descent * self.vscale
 
     def get_width(self) -> float:
-        w = self.bbox[2] - self.bbox[0]
+        w = self._bbox_width
         if w == 0:
             w = -self.default_width
         return w * self.hscale
