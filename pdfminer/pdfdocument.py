@@ -466,7 +466,10 @@ class PDFStandardSecurityHandler:
 
     def decrypt_rc4(self, objid: int, genno: int, data: bytes) -> bytes:
         assert self.key is not None
-        key = self.key + struct.pack("<L", objid)[:3] + struct.pack("<L", genno)[:2]
+        # build the objid/genno tail without struct.pack for slightly lower overhead
+        objid_tail = bytes((objid & 0xFF, (objid >> 8) & 0xFF, (objid >> 16) & 0xFF))
+        genno_tail = bytes((genno & 0xFF, (genno >> 8) & 0xFF))
+        key = self.key + objid_tail + genno_tail
         hash = md5(key)
         key = hash.digest()[: min(len(key), 16)]
         return Arcfour(key).decrypt(data)
