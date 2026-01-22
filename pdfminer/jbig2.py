@@ -46,11 +46,16 @@ def check_flag(flag: int, value: int) -> bool:
 
 
 def masked_value(mask: int, value: int) -> int:
-    for bit_pos in range(31):
-        if bit_set(bit_pos, mask):
-            return (value & mask) >> bit_pos
+    # Find the least significant set bit
+    lsb = mask & -mask
+    if lsb == 0:
+        raise PDFValueError("Invalid mask or value")
 
-    raise PDFValueError("Invalid mask or value")
+    bit_pos = lsb.bit_length() - 1
+    if bit_pos >= 31:
+        raise PDFValueError("Invalid mask or value")
+
+    return (value & mask) >> bit_pos
 
 
 def mask_value(mask: int, value: int) -> int:
