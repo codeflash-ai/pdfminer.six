@@ -125,6 +125,7 @@ class PDFXRef(PDFBaseXRef):
     def __init__(self) -> None:
         self.offsets: dict[int, tuple[int | None, int, int]] = {}
         self.trailer: dict[str, Any] = {}
+        self._objids = self.offsets.keys()
 
     def __repr__(self) -> str:
         return f"<PDFXRef: offsets={self.offsets.keys()!r}>"
@@ -197,7 +198,7 @@ class PDFXRef(PDFBaseXRef):
         return self.trailer
 
     def get_objids(self) -> KeysView[int]:
-        return self.offsets.keys()
+        return self._objids
 
     def get_pos(self, objid: int) -> tuple[int | None, int, int]:
         return self.offsets[objid]
