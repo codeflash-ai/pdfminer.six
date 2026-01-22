@@ -109,12 +109,14 @@ KEYWORD_DICT_END = KWD(b">>")
 
 def literal_name(x: Any) -> str:
     if isinstance(x, PSLiteral):
-        if isinstance(x.name, str):
-            return x.name
+        name = x.name
+        if isinstance(name, str):
+            return name
+        # name is expected to be bytes in most cases; decode directly which is slightly faster
         try:
-            return str(x.name, "utf-8")
+            return name.decode("utf-8")
         except UnicodeDecodeError:
-            return str(x.name)
+            return str(name)
     else:
         if settings.STRICT:
             raise PSTypeError(f"Literal required: {x!r}")

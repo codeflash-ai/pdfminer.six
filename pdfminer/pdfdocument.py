@@ -36,7 +36,7 @@ from pdfminer.pdftypes import (
     uint_value,
 )
 from pdfminer.psexceptions import PSEOF
-from pdfminer.psparser import KWD, LIT, literal_name
+from pdfminer.psparser import PSLiteral, KWD, LIT, literal_name
 from pdfminer.utils import (
     choplist,
     decode_text,
@@ -515,8 +515,34 @@ class PDFStandardSecurityHandlerV4(PDFStandardSecurityHandler):
     ) -> bytes:
         if not self.encrypt_metadata and attrs is not None:
             t = attrs.get("Type")
-            if t is not None and literal_name(t) == "Metadata":
-                return data
+            if t is not None:
+                # Fast-path common cases to avoid a full literal_name() call:
+                #  - If it's already a str, compare directly.
+                #  - If it's bytes, compare to bytes literal.
+                #  - If it's a PSLiteral, check its .name for str/bytes.
+                if isinstance(t, str):
+                    if t == "Metadata":
+                        return data
+                elif isinstance(t, bytes):
+                    if t == b"Metadata":
+                        return data
+                elif isinstance(t, PSLiteral):
+                    tn = t.name
+                    if isinstance(tn, str):
+                        if tn == "Metadata":
+                            return data
+                    elif isinstance(tn, bytes):
+                        if tn == b"Metadata":
+                            return data
+                    else:
+                        # fall back to literal_name for unusual types inside PSLiteral
+                        if literal_name(t) == "Metadata":
+                            return data
+                else:
+                    # Non-literal types: preserve original behavior which may raise
+                    # PSTypeError under STRICT or return str(t).
+                    if literal_name(t) == "Metadata":
+                        return data
         if name is None:
             name = self.strf
         return self.cfm[name](objid, genno, data)
