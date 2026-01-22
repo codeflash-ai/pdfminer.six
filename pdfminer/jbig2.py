@@ -54,11 +54,16 @@ def masked_value(mask: int, value: int) -> int:
 
 
 def mask_value(mask: int, value: int) -> int:
-    for bit_pos in range(31):
-        if bit_set(bit_pos, mask):
-            return (value & (mask >> bit_pos)) << bit_pos
+    # Find lowest set bit position using bit manipulation
+    low = mask & -mask
+    if low == 0:
+        raise PDFValueError("Invalid mask or value")
+    
+    bit_pos = low.bit_length() - 1
+    if bit_pos >= 31:
+        raise PDFValueError("Invalid mask or value")
 
-    raise PDFValueError("Invalid mask or value")
+    return (value & (mask >> bit_pos)) << bit_pos
 
 
 def unpack_int(format: str, buffer: bytes) -> int:
