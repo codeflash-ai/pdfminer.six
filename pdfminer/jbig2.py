@@ -46,11 +46,11 @@ def check_flag(flag: int, value: int) -> bool:
 
 
 def masked_value(mask: int, value: int) -> int:
-    for bit_pos in range(31):
-        if bit_set(bit_pos, mask):
-            return (value & mask) >> bit_pos
-
-    raise PDFValueError("Invalid mask or value")
+    if mask == 0:
+        raise PDFValueError("Invalid mask or value")
+    # Find the position of the rightmost set bit
+    bit_pos = (mask & -mask).bit_length() - 1
+    return (value & mask) >> bit_pos
 
 
 def mask_value(mask: int, value: int) -> int:
@@ -132,16 +132,17 @@ class JBIG2StreamReader:
 
         if ref_count < REF_COUNT_LONG:
             for bit_pos in range(5):
-                retain_segments.append(bit_set(bit_pos, flags))
+                retain_segments.append(bool((flags >> bit_pos) & 1))
         else:
             field += self.stream.read(3)
-            ref_count = unpack_int(">L", field)
+            ref_count, = unpack(">L", field)
             ref_count = masked_value(REF_COUNT_LONG_MASK, ref_count)
             ret_bytes_count = math.ceil((ref_count + 1) / 8)
             for _ret_byte_index in range(ret_bytes_count):
-                ret_byte = unpack_int(">B", self.stream.read(1))
+                ret_byte, = unpack(">B", self.stream.read(1))
                 for bit_pos in range(7):
-                    retain_segments.append(bit_set(bit_pos, ret_byte))
+                    retain_segments.append(bool((ret_byte >> bit_pos) & 1))
+
 
         seg_num = segment["number"]
         assert isinstance(seg_num, int)
@@ -156,7 +157,7 @@ class JBIG2StreamReader:
 
         for _ref_index in range(ref_count):
             ref_data = self.stream.read(ref_size)
-            ref = unpack_int(ref_format, ref_data)
+            ref, = unpack(ref_format, ref_data)
             ref_segments.append(ref)
 
         return {
