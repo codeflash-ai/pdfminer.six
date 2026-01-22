@@ -163,16 +163,26 @@ class PDFTextDevice(PDFDevice):
     ) -> Point:
         (x, y) = pos
         needcharspace = False
+
+        # Unpack the matrix once so we avoid repeated tuple unpacking inside
+        # the per-character inner loop and inline the translation math to
+        # remove the call to utils.translate_matrix.
+        (a, b, c, d, e, f) = matrix
+
         for obj in seq:
             if isinstance(obj, (int, float)):
                 x -= obj * dxscale
                 needcharspace = True
             elif isinstance(obj, bytes):
-                for cid in font.decode(obj):
+                decoded = font.decode(obj)
+                for cid in decoded:
                     if needcharspace:
                         x += charspace
+                    # Inline translate_matrix: compute the translated origin
+                    tx = x * a + y * c + e
+                    ty = x * b + y * d + f
                     x += self.render_char(
-                        utils.translate_matrix(matrix, (x, y)),
+                        (a, b, c, d, tx, ty),
                         font,
                         fontsize,
                         scaling,
