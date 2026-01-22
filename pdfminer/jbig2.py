@@ -179,7 +179,7 @@ class JBIG2StreamReader:
     ) -> int:
         if length:
             if (
-                cast(JBIG2SegmentFlags, segment["flags"])["type"]
+                segment["flags"]["type"]
                 == SEG_TYPE_IMMEDIATE_GEN_REGION
             ) and (length == DATA_LEN_UNKNOWN):
                 raise NotImplementedError(
