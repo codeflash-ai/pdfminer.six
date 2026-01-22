@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Iterable
-from typing import ClassVar, cast
+from typing import ClassVar
 
 from pdfminer.glyphlist import glyphname2unicode
 from pdfminer.latin_enc import ENCODING
@@ -33,27 +33,36 @@ def name2unicode(name: str) -> str:
             f"it should be of type str but is of type {type(name)}",
         )
 
-    name = name.split(".")[0]
-    components = name.split("_")
+    # split on the first '.' only (avoid allocating a list from split when not needed)
+    dot = name.find(".")
+    if dot != -1:
+        name = name[:dot]
 
-    if len(components) > 1:
+    # handle composite names with underscores
+    if "_" in name:
+        components = name.split("_")
         return "".join(map(name2unicode, components))
 
-    elif name in glyphname2unicode:
+    # try direct glyph name mapping with a single lookup
+    try:
         return glyphname2unicode[name]
+    except KeyError:
+        pass
 
-    elif name.startswith("uni"):
+    # names that start with 'uni' represent sequences of 4-hex-digit unicode values
+    if name.startswith("uni"):
+        # preserve original behavior using strip("uni")
         name_without_uni = name.strip("uni")
 
         if HEXADECIMAL.match(name_without_uni) and len(name_without_uni) % 4 == 0:
-            unicode_digits = [
-                int(name_without_uni[i : i + 4], base=16)
-                for i in range(0, len(name_without_uni), 4)
-            ]
-            for digit in unicode_digits:
+            chars = []
+            for i in range(0, len(name_without_uni), 4):
+                digit = int(name_without_uni[i : i + 4], base=16)
                 raise_key_error_for_invalid_unicode(digit)
-            characters = map(chr, unicode_digits)
-            return "".join(characters)
+                chars.append(chr(digit))
+            return "".join(chars)
+
+    # names that start with 'u' represent a single unicode value of length 4-6 hex digits
 
     elif name.startswith("u"):
         name_without_u = name.strip("u")
@@ -120,7 +129,8 @@ class EncodingDB:
                     cid = x
                 elif isinstance(x, PSLiteral):
                     try:
-                        cid2unicode[cid] = name2unicode(cast(str, x.name))
+                        # cast() is a no-op at runtime; pass the attribute directly
+                        cid2unicode[cid] = name2unicode(x.name)
                     except (KeyError, ValueError) as e:
                         log.debug(str(e))
                     cid += 1
