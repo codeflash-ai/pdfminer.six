@@ -4,6 +4,8 @@ import re
 from base64 import a85decode
 from binascii import unhexlify
 
+_WHITESPACE = b" \t\n\r\f\v"
+
 start_re = re.compile(rb"^\s*<?\s*~\s*")
 end_re = re.compile(rb"\s*~\s*>?\s*$")
 
@@ -22,9 +24,42 @@ def ascii85decode(data: bytes) -> bytes:
     ASCII85 digits, so we can't strip them.  We settle on a compromise
     where we strip leading `<~` or `~` and trailing `~` or `~>`.
     """
-    data = start_re.sub(b"", data)
-    data = end_re.sub(b"", data)
-    return a85decode(data)
+    n = len(data)
+
+    # Trim start: match r"^\s*<?\s*~\s*"
+    i = 0
+    while i < n and data[i] in _WHITESPACE:
+        i += 1
+    if i < n and data[i] == 0x3C:  # ord('<')
+        i += 1
+        while i < n and data[i] in _WHITESPACE:
+            i += 1
+    if i < n and data[i] == 0x7E:  # ord('~')
+        i += 1
+        while i < n and data[i] in _WHITESPACE:
+            i += 1
+        start_idx = i
+    else:
+        start_idx = 0
+
+    # Trim end: match r"\s*~\s*>?\s*$"
+    j = n
+    while j > 0 and data[j - 1] in _WHITESPACE:
+        j -= 1
+    pos = j
+    if pos > 0 and data[pos - 1] == 0x3E:  # ord('>')
+        pos -= 1
+    while pos > 0 and data[pos - 1] in _WHITESPACE:
+        pos -= 1
+    if pos > 0 and data[pos - 1] == 0x7E:  # ord('~')
+        k = pos - 1
+        while k > 0 and data[k - 1] in _WHITESPACE:
+            k -= 1
+        end_idx = k
+    else:
+        end_idx = n
+
+    return a85decode(data[start_idx:end_idx])
 
 
 bws_re = re.compile(rb"\s")
