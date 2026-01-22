@@ -115,9 +115,9 @@ class JBIG2StreamReader:
         field: bytes,
     ) -> JBIG2SegmentFlags:
         return {
-            "deferred": check_flag(HEADER_FLAG_DEFERRED, flags),
-            "page_assoc_long": check_flag(HEADER_FLAG_PAGE_ASSOC_LONG, flags),
-            "type": masked_value(SEG_TYPE_MASK, flags),
+            "deferred": bool(HEADER_FLAG_DEFERRED & flags),
+            "page_assoc_long": bool(HEADER_FLAG_PAGE_ASSOC_LONG & flags),
+            "type": flags & SEG_TYPE_MASK,
         }
 
     def parse_retention_flags(
