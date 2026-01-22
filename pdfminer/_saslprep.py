@@ -26,6 +26,21 @@ from collections.abc import Callable
 
 from pdfminer.pdfexceptions import PDFValueError
 
+_PROHIBITED: tuple[Callable[[str], bool], ...] = (
+    # A strict reading of RFC 4013 requires table c12 here, but
+    # characters from it are mapped to SPACE in the Map step. Can
+    # normalization reintroduce them somehow?
+    stringprep.in_table_c12,
+    stringprep.in_table_c21_c22,
+    stringprep.in_table_c3,
+    stringprep.in_table_c4,
+    stringprep.in_table_c5,
+    stringprep.in_table_c6,
+    stringprep.in_table_c7,
+    stringprep.in_table_c8,
+    stringprep.in_table_c9,
+)
+
 # RFC4013 section 2.3 prohibited output.
 _PROHIBITED: tuple[Callable[[str], bool], ...] = (
     # A strict reading of RFC 4013 requires table c12 here, but
@@ -95,7 +110,9 @@ def saslprep(data: str, prohibit_unassigned_code_points: bool = True) -> str:
 
     # RFC3454 section 2, step 3 and 4 - Prohibit and check bidi
     for char in data:
-        if any(in_table(char) for in_table in prohibited):
-            raise PDFValueError("SASLprep: failed prohibited character check")
+        for in_table in prohibited:
+            if in_table(char):
+                raise PDFValueError("SASLprep: failed prohibited character check")
+
 
     return data
