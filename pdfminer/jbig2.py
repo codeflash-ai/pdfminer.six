@@ -1,7 +1,7 @@
 import math
 import os
 from collections.abc import Iterable
-from struct import calcsize, pack, unpack
+from struct import calcsize, error, pack
 from typing import BinaryIO, ClassVar, cast
 
 from pdfminer.pdfexceptions import PDFValueError
@@ -63,8 +63,18 @@ def mask_value(mask: int, value: int) -> int:
 
 def unpack_int(format: str, buffer: bytes) -> int:
     assert format in {">B", ">I", ">L"}
-    [result] = cast(tuple[int], unpack(format, buffer))
-    return result
+    # Use fast byte operations instead of struct.unpack for common fixed sizes.
+    # But we need to validate buffer length to match original error behavior.
+    if format == ">B":
+        if len(buffer) < 1:
+            from struct import error
+            raise error("unpack requires a buffer of 1 bytes")
+        return buffer[0]
+    # Both ">I" and ">L" are 4-byte unsigned big-endian values here.
+    if len(buffer) < 4:
+        from struct import error
+        raise error("unpack requires a buffer of 4 bytes")
+    return int.from_bytes(buffer, "big", signed=False)
 
 
 JBIG2SegmentFlags = dict[str, int | bool]
@@ -83,16 +93,22 @@ class JBIG2StreamReader:
 
     def get_segments(self) -> list[JBIG2Segment]:
         segments: list[JBIG2Segment] = []
+        # Precompute sizes and parser lookups to avoid repeated work in the loop.
+        field_specs = []
+        for field_format, name in SEG_STRUCT:
+            field_len = calcsize(field_format)
+            parser = getattr(self, f"parse_{name}", None)
+            field_specs.append((field_format, name, field_len, parser))
+
+        stream = self.stream
         while not self.is_eof():
             segment: JBIG2Segment = {}
-            for field_format, name in SEG_STRUCT:
-                field_len = calcsize(field_format)
-                field = self.stream.read(field_len)
+            for field_format, name, field_len, parser in field_specs:
+                field = stream.read(field_len)
                 if len(field) < field_len:
                     segment["_error"] = True
                     break
                 value = unpack_int(field_format, field)
-                parser = getattr(self, f"parse_{name}", None)
                 if callable(parser):
                     value = parser(segment, value, field)
                 segment[name] = value
