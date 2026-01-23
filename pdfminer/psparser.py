@@ -15,6 +15,8 @@ from typing import (
 from pdfminer import psexceptions, settings
 from pdfminer.utils import choplist
 
+_HEX_SET = set(b"0123456789ABCDEFabcdef")
+
 log = logging.getLogger(__name__)
 
 
@@ -336,7 +338,7 @@ class PSBaseParser:
 
     def _parse_literal_hex(self, s: bytes, i: int) -> int:
         c = s[i : i + 1]
-        if HEX.match(c) and len(self.hex) < 2:
+        if c and c[0] in _HEX_SET and len(self.hex) < 2:
             self.hex += c
             return i + 1
         if self.hex:
