@@ -99,7 +99,7 @@ class PDFTextState:
         )
 
     def copy(self) -> "PDFTextState":
-        obj = PDFTextState()
+        obj = object.__new__(PDFTextState)
         obj.font = self.font
         obj.fontsize = self.fontsize
         obj.charspace = self.charspace
@@ -153,7 +153,7 @@ class PDFGraphicState:
         self.ncs: PDFColorSpace = PREDEFINED_COLORSPACE["DeviceGray"]
 
     def copy(self) -> "PDFGraphicState":
-        obj = PDFGraphicState()
+        obj = object.__new__(PDFGraphicState)
         obj.linewidth = self.linewidth
         obj.linecap = self.linecap
         obj.linejoin = self.linejoin
