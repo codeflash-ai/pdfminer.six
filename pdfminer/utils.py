@@ -801,10 +801,11 @@ class Plane(Generic[LTComponentT]):
         """Finds objects that are in a certain area."""
         (x0, y0, x1, y1) = bbox
         done = set()
+        grid = self._grid
         for k in self._getrange(bbox):
-            if k not in self._grid:
+            if k not in grid:
                 continue
-            for obj in self._grid[k]:
+            for obj in grid[k]:
                 if obj in done:
                     continue
                 done.add(obj)
