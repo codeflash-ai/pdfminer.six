@@ -457,9 +457,8 @@ class PSBaseParser:
         return i
 
     def _parse_wclose(self, s: bytes, i: int) -> int:
-        c = s[i : i + 1]
-        if c == b">":
-            self._add_token(KEYWORD_DICT_END)
+        if i < len(s) and s[i] == 62:  # 62 is ord(b'>')
+            self._tokens.append((self._curtokenpos, KEYWORD_DICT_END))
             i += 1
         self._parse1 = self._parse_main
         return i
