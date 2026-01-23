@@ -719,17 +719,26 @@ def vecBetweenBoxes(obj1: "LTComponent", obj2: "LTComponent") -> Point:
              :          | obj2 |
     (x0, y0) +..........+------+
     """
-    (x0, y0) = (min(obj1.x0, obj2.x0), min(obj1.y0, obj2.y0))
-    (x1, y1) = (max(obj1.x1, obj2.x1), max(obj1.y1, obj2.y1))
-    (ow, oh) = (x1 - x0, y1 - y0)
-    (iw, ih) = (ow - obj1.width - obj2.width, oh - obj1.height - obj2.height)
+    # compute bounding rect corners without creating intermediate tuples
+    x0 = obj1.x0 if obj1.x0 < obj2.x0 else obj2.x0
+    y0 = obj1.y0 if obj1.y0 < obj2.y0 else obj2.y0
+    x1 = obj1.x1 if obj1.x1 > obj2.x1 else obj2.x1
+    y1 = obj1.y1 if obj1.y1 > obj2.y1 else obj2.y1
+
+    ow = x1 - x0
+    oh = y1 - y0
+
+    iw = ow - obj1.width - obj2.width
+    ih = oh - obj1.height - obj2.height
+
     if iw < 0 and ih < 0:
         # if one is inside another we compute euclidean distance
-        (xc1, yc1) = ((obj1.x0 + obj1.x1) / 2, (obj1.y0 + obj1.y1) / 2)
-        (xc2, yc2) = ((obj2.x0 + obj2.x1) / 2, (obj2.y0 + obj2.y1) / 2)
-        return xc1 - xc2, yc1 - yc2
+        # compute center differences directly to avoid extra temporaries
+        return ((obj1.x0 + obj1.x1 - obj2.x0 - obj2.x1) / 2,
+                (obj1.y0 + obj1.y1 - obj2.y0 - obj2.y1) / 2)
     else:
-        return max(0, iw), max(0, ih)
+        # avoid built-in max calls and extra tuple creations
+        return (iw if iw > 0 else 0, ih if ih > 0 else 0)
 
 
 LTComponentT = TypeVar("LTComponentT", bound="LTComponent")
