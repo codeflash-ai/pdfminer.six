@@ -422,9 +422,10 @@ class PSBaseParser:
 
         PDF Reference 3.2.3
         """
-        c = s[i : i + 1]
-        if OCT_STRING.match(c) and len(self.oct) < 3:
-            self.oct += c
+        c = s[i]
+        # Check if c is an octal digit (48-55 are ASCII codes for '0'-'7')
+        if 48 <= c <= 55 and len(self.oct) < 3:
+            self.oct += bytes((c,))
             return i + 1
 
         elif self.oct:
@@ -434,10 +435,11 @@ class PSBaseParser:
             self._parse1 = self._parse_string
             return i
 
-        elif c in ESC_STRING:
-            self._curtoken += bytes((ESC_STRING[c],))
+        c_bytes = bytes((c,))
+        if c_bytes in ESC_STRING:
+            self._curtoken += bytes((ESC_STRING[c_bytes],))
 
-        elif c == b"\r" and len(s) > i + 1 and s[i + 1 : i + 2] == b"\n":
+        elif c == 13 and i + 1 < len(s) and s[i + 1] == 10:  # b"\r" and b"\n"
             # If current and next character is \r\n skip both because enters
             # after a \ are ignored
             i += 1
