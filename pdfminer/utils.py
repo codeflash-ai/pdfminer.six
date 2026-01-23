@@ -703,7 +703,14 @@ def bbox2str(bbox: Rect) -> str:
 
 def matrix2str(m: Matrix) -> str:
     (a, b, c, d, e, f) = m
-    return f"[{a:.2f},{b:.2f},{c:.2f},{d:.2f}, ({e:.2f},{f:.2f})]"
+    try:
+        return "[%.2f,%.2f,%.2f,%.2f, (%.2f,%.2f)]" % (a, b, c, d, e, f)
+    except TypeError:
+        # Convert TypeError to ValueError to match f-string behavior
+        for val in (a, b, c, d, e, f):
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"Unknown format code 'f' for object of type '{type(val).__name__}'") from None
+        raise
 
 
 def vecBetweenBoxes(obj1: "LTComponent", obj2: "LTComponent") -> Point:
