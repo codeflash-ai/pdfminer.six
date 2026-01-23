@@ -2,7 +2,6 @@
 
 import io
 import pathlib
-import string
 from collections.abc import Callable, Iterable, Iterator
 from html import escape
 from typing import (
@@ -847,9 +846,16 @@ def format_int_alpha(value: int) -> str:
     assert value > 0
     result: list[str] = []
 
+    alph = "abcdefghijklmnopqrstuvwxyz"
+    base = 26
+
     while value != 0:
-        value, remainder = divmod(value - 1, len(string.ascii_lowercase))
-        result.append(string.ascii_lowercase[remainder])
+        # decrement first to make the range 0..base-1 for modulus
+        value -= 1
+        remainder = value % base
+        value //= base
+        result.append(alph[remainder])
+
 
     result.reverse()
     return "".join(result)
