@@ -1276,7 +1276,7 @@ class PDFPageInterpreter:
             self.textstate,
             cast(PDFTextSeq, seq),
             self.graphicstate.ncs,
-            self.graphicstate.copy(),
+            self.graphicstate,
         )
 
     def do_Tj(self, s: PDFStackT) -> None:
