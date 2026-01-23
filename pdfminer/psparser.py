@@ -201,8 +201,9 @@ class PSBaseParser:
         return False
 
     def nextline(self) -> tuple[int, bytes]:
-        """Fetches a next line that ends either with \\r or \\n."""
-        linebuf = b""
+        """Fetches a next line that ends either with \r or \n."""
+        # Use parts list to avoid repeated bytes concatenation.
+        parts: list[bytes] = []
         linepos = self.bufpos + self.charpos
         eol = False
         while 1:
@@ -211,20 +212,45 @@ class PSBaseParser:
                 c = self.buf[self.charpos : self.charpos + 1]
                 # handle b'\r\n'
                 if c == b"\n":
-                    linebuf += c
+                    parts.append(c)
                     self.charpos += 1
                 break
-            m = EOL.search(self.buf, self.charpos)
-            if m:
-                linebuf += self.buf[self.charpos : m.end(0)]
-                self.charpos = m.end(0)
-                if linebuf[-1:] == b"\r":
-                    eol = True
+            # Find next occurrence of '\n' or '\r' without using regex.
+            i_n = self.buf.find(b"\n", self.charpos)
+            i_r = self.buf.find(b"\r", self.charpos)
+            # Determine which comes first (if any)
+            if i_n == -1 and i_r == -1:
+                # no EOL found in this buffer slice
+                parts.append(self.buf[self.charpos :])
+                self.charpos = len(self.buf)
+            else:
+                if i_n == -1:
+                    idx = i_r
+                    kind = b'\r'
+                elif i_r == -1:
+                    idx = i_n
+                    kind = b'\n'
+                else:
+                    if i_r < i_n:
+                        idx = i_r
+                        kind = b'\r'
+                    else:
+                        idx = i_n
+                        kind = b'\n'
+                # include up to and including the found newline byte
+                parts.append(self.buf[self.charpos : idx + 1])
+                self.charpos = idx + 1
+                if kind == b'\r':
+                    # If the found EOL is '\r' we must detect if it's the end of buffer.
+                    # The original implementation set eol=True when linebuf[-1:]==b"\r".
+                    # Here we check the last byte of the most recently appended part.
+                    if parts and parts[-1][-1:] == b"\r":
+                        eol = True
+                    else:
+                        break
                 else:
                     break
-            else:
-                linebuf += self.buf[self.charpos :]
-                self.charpos = len(self.buf)
+        linebuf = b"".join(parts)
         log.debug("nextline: %r, %r", linepos, linebuf)
 
         return (linepos, linebuf)
