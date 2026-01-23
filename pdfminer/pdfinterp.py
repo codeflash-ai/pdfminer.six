@@ -454,7 +454,7 @@ class PDFPageInterpreter:
         if n == 0:
             return []
         x = self.argstack[-n:]
-        self.argstack = self.argstack[:-n]
+        del self.argstack[-n:]
         return x
 
     def get_current_state(self) -> tuple[Matrix, PDFTextState, PDFGraphicState]:
