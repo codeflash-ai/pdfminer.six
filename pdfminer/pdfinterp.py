@@ -99,7 +99,7 @@ class PDFTextState:
         )
 
     def copy(self) -> "PDFTextState":
-        obj = PDFTextState()
+        obj = object.__new__(PDFTextState)
         obj.font = self.font
         obj.fontsize = self.fontsize
         obj.charspace = self.charspace
