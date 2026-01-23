@@ -4,13 +4,7 @@ import io
 import logging
 import re
 from collections.abc import Iterator
-from typing import (
-    Any,
-    BinaryIO,
-    Generic,
-    TypeVar,
-    Union,
-)
+from typing import Any, BinaryIO, Generic, TypeVar, Union
 
 from pdfminer import psexceptions, settings
 from pdfminer.utils import choplist

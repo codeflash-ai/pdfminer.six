@@ -2,13 +2,7 @@ import io
 import logging
 import zlib
 from collections.abc import Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Optional,
-    Protocol,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Optional, Protocol, cast
 from warnings import warn
 
 from pdfminer import pdfexceptions, settings
