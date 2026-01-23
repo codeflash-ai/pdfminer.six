@@ -197,8 +197,11 @@ class LTComponent(LTItem):
 
     def voverlap(self, obj: "LTComponent") -> float:
         assert isinstance(obj, LTComponent), str(type(obj))
-        if self.is_voverlap(obj):
-            return min(abs(self.y0 - obj.y1), abs(self.y1 - obj.y0))
+        # Inline the overlap test to avoid an extra function call to is_voverlap.
+        if obj.y0 <= self.y1 and self.y0 <= obj.y1:
+            a = abs(self.y0 - obj.y1)
+            b = abs(self.y1 - obj.y0)
+            return a if a < b else b
         else:
             return 0
 
