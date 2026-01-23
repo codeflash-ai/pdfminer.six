@@ -172,7 +172,7 @@ class LTComponent(LTItem):
 
     def hdistance(self, obj: "LTComponent") -> float:
         assert isinstance(obj, LTComponent), str(type(obj))
-        if self.is_hoverlap(obj):
+        if obj.x0 <= self.x1 and self.x0 <= obj.x1:
             return 0
         else:
             return min(abs(self.x0 - obj.x1), abs(self.x1 - obj.x0))
