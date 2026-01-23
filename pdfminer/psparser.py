@@ -303,11 +303,13 @@ class PSBaseParser:
         self._tokens.append((self._curtokenpos, obj))
 
     def _parse_comment(self, s: bytes, i: int) -> int:
-        m = EOL.search(s, i)
-        if not m:
+        j = s.find(b'\n', i)
+        j2 = s.find(b'\r', i)
+        if j2 != -1 and (j == -1 or j2 < j):
+            j = j2
+        if j == -1:
             self._curtoken += s[i:]
             return len(s)
-        j = m.start(0)
         self._curtoken += s[i:j]
         self._parse1 = self._parse_main
         # We ignore comments.
