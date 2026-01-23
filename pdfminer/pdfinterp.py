@@ -263,9 +263,16 @@ class PDFContentParser(PSStackParser[Union[PSKeyword, PDFStream]]):
         PSStackParser.__init__(self, None)  # type: ignore[arg-type]
 
     def fillfp(self) -> bool:
-        if not self.fp:
+        # Use an explicit None check for self.fp (faster and avoids __bool__ calls)
+        if self.fp is None:
             if self.istream < len(self.streams):
-                strm = stream_value(self.streams[self.istream])
+                # Fast-path: avoid resolve1 and function call when the stored
+                # stream object is already a PDFStream (common case).
+                strm_obj = self.streams[self.istream]
+                if isinstance(strm_obj, PDFStream):
+                    strm = strm_obj
+                else:
+                    strm = stream_value(strm_obj)
                 self.istream += 1
             else:
                 raise PSEOF("Unexpected EOF, file truncated?")
