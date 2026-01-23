@@ -872,7 +872,15 @@ def unpad_aes(padded: bytes) -> bytes:
     # A valid padding byte is the length of the padding
     if padding > len(padded):  # Obviously invalid
         return padded
+    # Special-case padding == 0 to preserve original behavior where
+    # padded[-0:] is the whole bytes object (so original code checked all bytes == 0).
+    if padding == 0:
+        # Use the C-implemented count for speed instead of a Python-level loop
+        if padded.count(b"\x00") == len(padded):
+            return padded[:-padding]  # padded[:-0] matches original behavior -> empty bytes
+        return padded
     # Every byte of padding is equal to the length of padding
-    if all(x == padding for x in padded[-padding:]):
+    # Use a C-level bytes equality against a small repeated-bytes object for speed.
+    if padded[-padding:] == bytes((padding,)) * padding:
         return padded[:-padding]
     return padded
