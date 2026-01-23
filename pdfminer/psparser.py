@@ -15,6 +15,8 @@ from typing import (
 from pdfminer import psexceptions, settings
 from pdfminer.utils import choplist
 
+_HEX_DIGITS = b"0123456789ABCDEFabcdef"
+
 log = logging.getLogger(__name__)
 
 
@@ -130,6 +132,17 @@ def keyword_name(x: Any) -> Any:
     else:
         name = str(x.name, "utf-8", "ignore")
     return name
+
+
+
+
+# Helper functions to check single-byte character categories without allocating bytes
+def _byte_is_alpha(c: int) -> bool:
+    return 65 <= c <= 90 or 97 <= c <= 122
+
+
+def _byte_is_digit(c: int) -> bool:
+    return 48 <= c <= 57
 
 
 EOL = re.compile(rb"[\r\n]")
@@ -321,8 +334,8 @@ class PSBaseParser:
             return len(s)
         j = m.start(0)
         self._curtoken += s[i:j]
-        c = s[j : j + 1]
-        if c == b"#":
+        c0 = s[j]
+        if c0 == 35:  # b"#"
             self.hex = b""
             self._parse1 = self._parse_literal_hex
             return j + 1
