@@ -15,6 +15,12 @@ from typing import (
 from pdfminer import psexceptions, settings
 from pdfminer.utils import choplist
 
+
+
+
+# Precompute a fast lookup table for ASCII hex digit values (0-15), -1 means non-hex.
+_HEX_VALUE: list[int] = [-1] * 256
+
 log = logging.getLogger(__name__)
 
 
@@ -471,10 +477,36 @@ class PSBaseParser:
             return len(s)
         j = m.start(0)
         self._curtoken += s[i:j]
-        token = HEX_PAIR.sub(
-            lambda m: bytes((int(m.group(0), 16),)),
-            SPC.sub(b"", self._curtoken),
-        )
+        # Remove ASCII whitespace quickly: equivalent to SPC.sub(b"", self._curtoken)
+        filtered = b"".join(self._curtoken.split())
+        n = len(filtered)
+        if n == 0:
+            token = b""
+            self._add_token(token)
+            self._parse1 = self._parse_main
+            return j
+        # Scan left-to-right, replacing every pair of hex digits with the corresponding byte,
+        # otherwise keep the character as-is. This preserves the original regex.sub behavior
+        # of replacing only matched pairs and leaving unmatched bytes intact.
+        hv = _HEX_VALUE
+        out = bytearray()
+        p = 0
+        # Process pairs where possible
+        while p + 1 < n:
+            a = filtered[p]
+            bch = filtered[p + 1]
+            va = hv[a]
+            vb = hv[bch]
+            if va != -1 and vb != -1:
+                out.append((va << 4) | vb)
+                p += 2
+            else:
+                out.append(a)
+                p += 1
+        # If one byte remains, append it (mimics leaving unmatched trailing nibble)
+        if p < n:
+            out.append(filtered[p])
+        token = bytes(out)
         self._add_token(token)
         self._parse1 = self._parse_main
         return j
