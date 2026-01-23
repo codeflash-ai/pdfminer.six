@@ -236,7 +236,9 @@ class LTCurve(LTComponent):
         self.dashing_style = dashing_style
 
     def get_pts(self) -> str:
-        return ",".join("{:.3f},{:.3f}".format(*p) for p in self.pts)
+        fmt = "{:.3f},{:.3f}".format
+        pts = self.pts
+        return ",".join(fmt(*p) for p in pts)
 
 
 class LTLine(LTCurve):
