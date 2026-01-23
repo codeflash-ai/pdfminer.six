@@ -1,5 +1,4 @@
 import logging
-import re
 from collections.abc import Mapping, Sequence
 from io import BytesIO
 from typing import Union, cast
@@ -281,7 +280,7 @@ class PDFContentParser(PSStackParser[Union[PSKeyword, PDFStream]]):
         if self.charpos < len(self.buf):
             return False
         new_stream = False
-        while 1:
+        while True:
             new_stream = self.fillfp()
             self.bufpos = self.fp.tell()
             self.buf = self.fp.read(self.BUFSIZ)
@@ -294,31 +293,43 @@ class PDFContentParser(PSStackParser[Union[PSKeyword, PDFStream]]):
     def get_inline_data(self, pos: int, target: bytes = b"EI") -> tuple[int, bytes]:
         self.seek(pos)
         i = 0
-        data = b""
-        while i <= len(target):
+        # Use bytearray to avoid repeated small-byte allocations from += on bytes
+        data_ba = bytearray()
+        lt = len(target)
+        first_byte = target[0]
+        # bytes considered whitespace in original implementation:
+        ws_bytes = b" \t\n\v\f\r"
+        while i <= lt:
             self.fillbuf()
             if i:
                 ci = self.buf[self.charpos]
-                c = bytes((ci,))
-                data += c
+                data_ba.append(ci)
                 self.charpos += 1
-                if (len(target) <= i and c.isspace()) or (
-                    i < len(target) and c == (bytes((target[i],)))
-                ):
+                if (lt <= i and ci in ws_bytes) or (i < lt and ci == target[i]):
                     i += 1
                 else:
                     i = 0
             else:
-                try:
-                    j = self.buf.index(target[0], self.charpos)
-                    data += self.buf[self.charpos : j + 1]
+                # find is slightly faster and avoids raising exceptions for misses
+                j = self.buf.find(first_byte, self.charpos)
+                if j != -1:
+                    data_ba.extend(self.buf[self.charpos : j + 1])
                     self.charpos = j + 1
                     i = 1
-                except ValueError:
-                    data += self.buf[self.charpos :]
+                else:
+                    data_ba.extend(self.buf[self.charpos :])
                     self.charpos = len(self.buf)
-        data = data[: -(len(target) + 1)]  # strip the last part
-        data = re.sub(rb"(\x0d\x0a|[\x0d\x0a])$", b"", data)
+        # strip the last part (target + one following byte)
+        strip_len = lt + 1
+        if strip_len:
+            data = bytes(data_ba[:-strip_len])
+        else:
+            data = bytes(data_ba)
+        # replace regex that removes a trailing CRLF or single CR/LF with direct checks
+        if data.endswith(b"\r\n"):
+            data = data[:-2]
+        elif data.endswith(b"\r") or data.endswith(b"\n"):
+            data = data[:-1]
         return (pos, data)
 
     def flush(self) -> None:
