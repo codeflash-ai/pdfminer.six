@@ -265,8 +265,12 @@ class PDFContentParser(PSStackParser[Union[PSKeyword, PDFStream]]):
     def fillfp(self) -> bool:
         if not self.fp:
             if self.istream < len(self.streams):
-                strm = stream_value(self.streams[self.istream])
+                item = self.streams[self.istream]
                 self.istream += 1
+                if isinstance(item, PDFStream):
+                    strm = item
+                else:
+                    strm = stream_value(item)
             else:
                 raise PSEOF("Unexpected EOF, file truncated?")
             self.fp = BytesIO(strm.get_data())
