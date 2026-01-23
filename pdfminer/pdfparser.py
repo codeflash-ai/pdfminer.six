@@ -55,33 +55,42 @@ class PDFParser(PSStackParser[Union[PSKeyword, PDFStream, PDFObjRef, None]]):
     def do_keyword(self, pos: int, token: PSKeyword) -> None:
         """Handles PDF-related keywords."""
         if token in (self.KEYWORD_XREF, self.KEYWORD_STARTXREF):
-            self.add_results(*self.pop(1))
+            # Inline pop(1) and add_results
+            self.results.extend(self.curstack[-1:])
+            del self.curstack[-1:]
+
 
         elif token is self.KEYWORD_ENDOBJ:
-            self.add_results(*self.pop(4))
+            # Inline pop(4) and add_results
+            self.results.extend(self.curstack[-4:])
+            del self.curstack[-4:]
+
 
         elif token is self.KEYWORD_NULL:
             # null object
-            self.push((pos, None))
+            self.curstack.append((pos, None))
+
 
         elif token is self.KEYWORD_R:
             # reference to indirect object
-            if len(self.curstack) >= 2:
-                (_, _object_id), _ = self.pop(2)
+            curstack_len = len(self.curstack)
+            if curstack_len >= 2:
+                (_, _object_id), _ = self.curstack[-2], self.curstack[-1]
+                del self.curstack[-2:]
                 object_id = safe_int(_object_id)
                 if object_id is not None:
                     obj = PDFObjRef(self.doc, object_id)
-                    self.push((pos, obj))
+                    self.curstack.append((pos, obj))
+
 
         elif token is self.KEYWORD_STREAM:
             # stream object
-            popped_data = self.pop(1)
-            try:
-                ((_, dic),) = popped_data
-            except ValueError as err:
-                raise PDFSyntaxError(
-                    f"Invalid stream dictionary: {popped_data}"
-                ) from err
+            if not self.curstack:
+                raise PDFSyntaxError(f"Invalid stream dictionary: []")
+            
+            (_, dic) = self.curstack[-1]
+            del self.curstack[-1:]
+
 
             dic = dict_value(dic)
             objlen = 0
@@ -100,8 +109,13 @@ class PDFParser(PSStackParser[Union[PSKeyword, PDFStream, PDFObjRef, None]]):
                 return
             pos += len(line)
             self.fp.seek(pos)
-            data = bytearray(self.fp.read(objlen))
-            self.seek(pos + objlen)
+            
+            if self.fallback:
+                data = bytearray()
+            else:
+                data = bytearray(self.fp.read(objlen))
+                self.seek(pos + objlen)
+            
             while 1:
                 try:
                     (_linepos, line) = self.nextline()
@@ -113,11 +127,11 @@ class PDFParser(PSStackParser[Union[PSKeyword, PDFStream, PDFObjRef, None]]):
                     i = line.index(b"endstream")
                     objlen += i
                     if self.fallback:
-                        data += line[:i]
+                        data.extend(line[:i])
                     break
                 objlen += len(line)
                 if self.fallback:
-                    data += line
+                    data.extend(line)
             self.seek(pos + objlen)
             # XXX limit objlen not to exceed object boundary
             log.debug(
@@ -129,11 +143,12 @@ class PDFParser(PSStackParser[Union[PSKeyword, PDFStream, PDFObjRef, None]]):
             )
             assert self.doc is not None
             stream = PDFStream(dic, bytes(data), self.doc.decipher)
-            self.push((pos, stream))
+            self.curstack.append((pos, stream))
+
 
         else:
             # others
-            self.push((pos, token))
+            self.curstack.append((pos, token))
 
 
 class PDFStreamParser(PDFParser):
