@@ -25,6 +25,13 @@ import contextlib
 
 import charset_normalizer  # For str encoding detection
 
+_ROMAN_LOOKUP = [
+    ["", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"],  # ones
+    ["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"],  # tens
+    ["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"],  # hundreds
+    ["", "m", "mm", "mmm"],  # thousands
+]
+
 # from sys import maxint as INF doesn't work anymore under Python3, but PDF
 # still uses 32 bits ints
 INF = (1 << 31) - 1
@@ -820,26 +827,11 @@ ROMAN_FIVES = ["v", "l", "d"]
 def format_int_roman(value: int) -> str:
     """Format a number as lowercase Roman numerals."""
     assert 0 < value < 4000
-    result: list[str] = []
-    index = 0
-
-    while value != 0:
-        value, remainder = divmod(value, 10)
-        if remainder == 9:
-            result.insert(0, ROMAN_ONES[index])
-            result.insert(1, ROMAN_ONES[index + 1])
-        elif remainder == 4:
-            result.insert(0, ROMAN_ONES[index])
-            result.insert(1, ROMAN_FIVES[index])
-        else:
-            over_five = remainder >= 5
-            if over_five:
-                result.insert(0, ROMAN_FIVES[index])
-                remainder -= 5
-            result.insert(1 if over_five else 0, ROMAN_ONES[index] * remainder)
-        index += 1
-
-    return "".join(result)
+    thousands = value // 1000
+    hundreds = (value // 100) % 10
+    tens = (value // 10) % 10
+    ones = value % 10
+    return _ROMAN_LOOKUP[3][thousands] + _ROMAN_LOOKUP[2][hundreds] + _ROMAN_LOOKUP[1][tens] + _ROMAN_LOOKUP[0][ones]
 
 
 def format_int_alpha(value: int) -> str:
