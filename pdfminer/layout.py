@@ -867,15 +867,36 @@ class LTLayoutContainer(LTContainer[LTComponent]):
             objs = set(plane.find((x0, y0, x1, y1)))
             return objs.difference((obj1, obj2))
 
-        dists: list[tuple[bool, float, int, int, ElementT, ElementT]] = []
-        for i in range(len(boxes)):
-            box1 = boxes[i]
-            for j in range(i + 1, len(boxes)):
-                box2 = boxes[j]
-                dists.append((False, dist(box1, box2), id(box1), id(box2), box1, box2))
-        heapq.heapify(dists)
 
+        # Build spatial grid for efficient neighbor finding
         plane.extend(boxes)
+        
+        # Compute distances only between spatially nearby boxes
+        dists: list[tuple[bool, float, int, int, ElementT, ElementT]] = []
+        seen_pairs: set[tuple[int, int]] = set()
+        
+        for box1 in boxes:
+            id1 = id(box1)
+            # Find nearby boxes using spatial query
+            search_margin = max(box1.width, box1.height) * 2
+            search_bbox = (
+                box1.x0 - search_margin,
+                box1.y0 - search_margin,
+                box1.x1 + search_margin,
+                box1.y1 + search_margin
+            )
+            nearby = plane.find(search_bbox)
+            
+            for box2 in nearby:
+                if box2 is box1:
+                    continue
+                id2 = id(box2)
+                pair_key = (min(id1, id2), max(id1, id2))
+                if pair_key not in seen_pairs:
+                    seen_pairs.add(pair_key)
+                    dists.append((False, dist(box1, box2), id1, id2, box1, box2))
+        
+        heapq.heapify(dists)
         done = set()
         while len(dists) > 0:
             (skip_isany, d, id1, id2, obj1, obj2) = heapq.heappop(dists)
@@ -895,10 +916,12 @@ class LTLayoutContainer(LTContainer[LTComponent]):
                 plane.remove(obj2)
                 done.update([id1, id2])
 
+
+                group_id = id(group)
                 for other in plane:
                     heapq.heappush(
                         dists,
-                        (False, dist(group, other), id(group), id(other), group, other),
+                        (False, dist(group, other), group_id, id(other), group, other),
                     )
                 plane.add(group)
         # By now only groups are in the plane
