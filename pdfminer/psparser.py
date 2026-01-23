@@ -539,7 +539,8 @@ class PSStackParser(PSBaseParser, Generic[ExtraT]):
 
     def pop(self, n: int) -> list[PSStackEntry[ExtraT]]:
         objs = self.curstack[-n:]
-        self.curstack[-n:] = []
+        # use del to remove the slice in-place without creating a new list object
+        del self.curstack[-n:]
         return objs
 
     def popall(self) -> list[PSStackEntry[ExtraT]]:
