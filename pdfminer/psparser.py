@@ -562,9 +562,10 @@ class PSStackParser(PSBaseParser, Generic[ExtraT]):
     def end_type(self, type: str) -> tuple[int, list[PSStackType[ExtraT]]]:
         if self.curtype != type:
             raise PSTypeError(f"Type mismatch: {self.curtype!r} != {type!r}")
-        objs = [obj for (_, obj) in self.curstack]
+        objs = [obj for _, obj in self.curstack]
         (pos, self.curtype, self.curstack) = self.context.pop()
-        log.debug("end_type: pos=%r, type=%r, objs=%r", pos, type, objs)
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("end_type: pos=%r, type=%r, objs=%r", pos, type, objs)
         return (pos, objs)
 
     def do_keyword(self, pos: int, token: PSKeyword) -> None:
