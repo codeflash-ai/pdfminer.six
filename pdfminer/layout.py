@@ -190,10 +190,19 @@ class LTComponent(LTItem):
 
     def vdistance(self, obj: "LTComponent") -> float:
         assert isinstance(obj, LTComponent), str(type(obj))
-        if self.is_voverlap(obj):
+        # Inline overlap check and optimize distance calculation
+        self_y0 = self.y0
+        self_y1 = self.y1
+        obj_y0 = obj.y0
+        obj_y1 = obj.y1
+        
+        if obj_y0 <= self_y1 and self_y0 <= obj_y1:
             return 0
         else:
-            return min(abs(self.y0 - obj.y1), abs(self.y1 - obj.y0))
+            # Calculate both distances and return minimum
+            dist1 = abs(self_y0 - obj_y1)
+            dist2 = abs(self_y1 - obj_y0)
+            return dist1 if dist1 < dist2 else dist2
 
     def voverlap(self, obj: "LTComponent") -> float:
         assert isinstance(obj, LTComponent), str(type(obj))
