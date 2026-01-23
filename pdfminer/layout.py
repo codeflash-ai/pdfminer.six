@@ -585,21 +585,34 @@ class LTTextLineVertical(LTTextLine):
         will be the same width as self, and also either upper-, lower-, or
         centrally-aligned.
         """
-        d = ratio * self.width
+        self_width = self.width
+        d = ratio * self_width
         objs = plane.find((self.x0 - d, self.y0, self.x1 + d, self.y1))
-        return [
-            obj
-            for obj in objs
-            if (
-                isinstance(obj, LTTextLineVertical)
-                and self._is_same_width_as(obj, tolerance=d)
-                and (
-                    self._is_lower_aligned_with(obj, tolerance=d)
-                    or self._is_upper_aligned_with(obj, tolerance=d)
-                    or self._is_centrally_aligned_with(obj, tolerance=d)
-                )
-            )
-        ]
+        
+        # Precompute self values
+        self_y0 = self.y0
+        self_y1 = self.y1
+        self_center_y = (self_y0 + self_y1) / 2
+        
+        result = []
+        for obj in objs:
+            if not isinstance(obj, LTTextLineVertical):
+                continue
+            
+            # Check width first (cheapest check)
+            if abs(obj.width - self_width) > d:
+                continue
+            
+            # Check alignment (avoid redundant calculations)
+            obj_y0 = obj.y0
+            obj_y1 = obj.y1
+            
+            if (abs(obj_y0 - self_y0) <= d or 
+                abs(obj_y1 - self_y1) <= d or 
+                abs((obj_y0 + obj_y1) / 2 - self_center_y) <= d):
+                result.append(obj)
+        
+        return result
 
     def _is_lower_aligned_with(self, other: LTComponent, tolerance: float = 0) -> bool:
         """Whether the lower edge of `other` is within `tolerance`."""
