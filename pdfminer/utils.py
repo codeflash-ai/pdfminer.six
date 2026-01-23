@@ -698,7 +698,14 @@ def enc(x: str) -> str:
 
 def bbox2str(bbox: Rect) -> str:
     (x0, y0, x1, y1) = bbox
-    return f"{x0:.3f},{y0:.3f},{x1:.3f},{y1:.3f}"
+    try:
+        return "%0.3f,%0.3f,%0.3f,%0.3f" % (x0, y0, x1, y1)
+    except TypeError:
+        # Convert TypeError to ValueError to match f-string behavior
+        for val in (x0, y0, x1, y1):
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"Unknown format code 'f' for object of type '{type(val).__name__}'")
+        raise
 
 
 def matrix2str(m: Matrix) -> str:
