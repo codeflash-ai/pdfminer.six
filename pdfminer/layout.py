@@ -179,8 +179,16 @@ class LTComponent(LTItem):
 
     def hoverlap(self, obj: "LTComponent") -> float:
         assert isinstance(obj, LTComponent), str(type(obj))
-        if self.is_hoverlap(obj):
-            return min(abs(self.x0 - obj.x1), abs(self.x1 - obj.x0))
+        # Inline the overlap check to avoid an extra method call and duplicate isinstance check.
+        if obj.x0 <= self.x1 and self.x0 <= obj.x1:
+            # Compute absolute differences without calling abs() to reduce call overhead.
+            d1 = self.x0 - obj.x1
+            if d1 < 0:
+                d1 = -d1
+            d2 = self.x1 - obj.x0
+            if d2 < 0:
+                d2 = -d2
+            return d1 if d1 < d2 else d2
         else:
             return 0
 
