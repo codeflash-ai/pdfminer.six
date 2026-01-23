@@ -61,7 +61,7 @@ class open_filename:
 
 def make_compat_bytes(in_str: str) -> bytes:
     """Converts to bytes, encoding to unicode."""
-    assert isinstance(in_str, str), str(type(in_str))
+    assert isinstance(in_str, str), type(in_str)
     return in_str.encode()
 
 
