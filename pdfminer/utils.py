@@ -751,7 +751,8 @@ class Plane(Generic[LTComponentT]):
         (self.x0, self.y0, self.x1, self.y1) = bbox
 
     def __repr__(self) -> str:
-        return f"<Plane objs={list(self)!r}>"
+        # Use a list comprehension instead of list(self) to avoid generator/frame overhead.
+        return f"<Plane objs={[obj for obj in self._seq if obj in self._objs]!r}>"
 
     def __iter__(self) -> Iterator[LTComponentT]:
         return (obj for obj in self._seq if obj in self._objs)
