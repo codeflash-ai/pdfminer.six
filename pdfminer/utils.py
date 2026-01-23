@@ -137,15 +137,29 @@ def apply_tiff_predictor(
     bpp = colors * (bitspercomponent // 8)
     nbytes = columns * bpp
     buf: list[int] = []
+    # Pre-allocate a bytearray for output to avoid repeated list appends and extensions.
+    # We keep the original annotated `buf` name and then reuse it as an actual buffer.
+    buf = bytearray(len(data))
+
+    mv = memoryview(data)
     for scanline_i in range(0, len(data), nbytes):
+        # Preserve original behavior when the final scanline is incomplete:
+        # the original code would attempt to index past the end of `data` and
+        # raise IndexError. Trigger the same exception in that case.
+        if scanline_i + nbytes > len(data):
+            _ = data[scanline_i + nbytes - 1]  # will raise IndexError like the original
+
         raw: list[int] = []
-        for i in range(nbytes):
-            new_value = data[scanline_i + i]
-            if i >= bpp:
-                new_value += raw[i - bpp]
-                new_value %= 256
-            raw.append(new_value)
-        buf.extend(raw)
+        # Create an in-place mutable copy of the scanline (fast C-level copy)
+        raw = bytearray(mv[scanline_i : scanline_i + nbytes])
+
+        # Decode in-place: for each byte after the first 'bpp' bytes,
+        # add the previously decoded byte (bpp bytes back) modulo 256.
+        for i in range(bpp, nbytes):
+            raw[i] = (raw[i] + raw[i - bpp]) & 0xFF
+
+        # Write the decoded scanline directly into the preallocated buffer.
+        buf[scanline_i : scanline_i + nbytes] = raw
 
     return bytes(buf)
 
