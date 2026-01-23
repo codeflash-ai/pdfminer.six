@@ -389,9 +389,8 @@ class PDFPageInterpreter:
         parent interpreter, allowing detection of circular references across
         nested XObject invocations.
         """
-        interp = self.dup()
-        interp.parent_stream_ids.update(self.parent_stream_ids)
-        interp.parent_stream_ids.update(self.stream_ids)
+        interp = self.__class__(self.rsrcmgr, self.device)
+        interp.parent_stream_ids = self.parent_stream_ids | self.stream_ids
         return interp
 
     def init_resources(self, resources: dict[object, object]) -> None:
