@@ -17,6 +17,7 @@ from typing import (
 )
 
 from pdfminer.pdfexceptions import PDFTypeError, PDFValueError
+from collections import OrderedDict
 
 if TYPE_CHECKING:
     from pdfminer.layout import LTComponent
@@ -24,6 +25,15 @@ if TYPE_CHECKING:
 import contextlib
 
 import charset_normalizer  # For str encoding detection
+
+_CACHE_MAX_SIZE = 1024
+
+
+
+# Simple LRU caches to avoid repeated expensive float->string formatting.
+# Keep a bounded size to prevent unbounded memory growth.
+_bbox2str_cache: "OrderedDict[tuple, str]" = OrderedDict()
+_matrix2str_cache: "OrderedDict[tuple, str]" = OrderedDict()
 
 # from sys import maxint as INF doesn't work anymore under Python3, but PDF
 # still uses 32 bits ints
@@ -698,12 +708,30 @@ def enc(x: str) -> str:
 
 def bbox2str(bbox: Rect) -> str:
     (x0, y0, x1, y1) = bbox
-    return f"{x0:.3f},{y0:.3f},{x1:.3f},{y1:.3f}"
+    key = (x0, y0, x1, y1)
+    cache = _bbox2str_cache
+    if key in cache:
+        cache.move_to_end(key)
+        return cache[key]
+    s = f"{x0:.3f},{y0:.3f},{x1:.3f},{y1:.3f}"
+    cache[key] = s
+    if len(cache) > _CACHE_MAX_SIZE:
+        cache.popitem(last=False)
+    return s
 
 
 def matrix2str(m: Matrix) -> str:
     (a, b, c, d, e, f) = m
-    return f"[{a:.2f},{b:.2f},{c:.2f},{d:.2f}, ({e:.2f},{f:.2f})]"
+    key = (a, b, c, d, e, f)
+    cache = _matrix2str_cache
+    if key in cache:
+        cache.move_to_end(key)
+        return cache[key]
+    s = f"[{a:.2f},{b:.2f},{c:.2f},{d:.2f}, ({e:.2f},{f:.2f})]"
+    cache[key] = s
+    if len(cache) > _CACHE_MAX_SIZE:
+        cache.popitem(last=False)
+    return s
 
 
 def vecBetweenBoxes(obj1: "LTComponent", obj2: "LTComponent") -> Point:
