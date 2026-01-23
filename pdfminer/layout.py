@@ -615,7 +615,7 @@ class LTTextLineVertical(LTTextLine):
         tolerance: float = 0,
     ) -> bool:
         """Whether the vertical center of `other` is within `tolerance`."""
-        return abs((other.y0 + other.y1) / 2 - (self.y0 + self.y1) / 2) <= tolerance
+        return abs((other.y0 + other.y1 - self.y0 - self.y1) * 0.5) <= tolerance
 
     def _is_same_width_as(self, other: LTComponent, tolerance: float) -> bool:
         return abs(other.width - self.width) <= tolerance
