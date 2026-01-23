@@ -6,7 +6,7 @@ import string
 from collections.abc import Callable, Iterable, Iterator
 from html import escape
 from typing import (
-    TYPE_CHECKING,
+    Optional, TYPE_CHECKING,
     Any,
     BinaryIO,
     Generic,
@@ -17,6 +17,7 @@ from typing import (
 )
 
 from pdfminer.pdfexceptions import PDFTypeError, PDFValueError
+from functools import lru_cache
 
 if TYPE_CHECKING:
     from pdfminer.layout import LTComponent
@@ -67,12 +68,21 @@ def make_compat_bytes(in_str: str) -> bytes:
 
 def make_compat_str(o: object) -> str:
     """Converts everything to string, if bytes guessing the encoding."""
+    # Small cached wrapper around the expensive detect call to avoid repeated work
+    @lru_cache(maxsize=256)
+    def _detect_encoding(b: bytes) -> Optional[str]:
+        enc = charset_normalizer.detect(b)
+        return enc.get("encoding")
+
     if isinstance(o, bytes):
-        enc = charset_normalizer.detect(o)
-        if enc["encoding"] is None:
+        # Fast path for pure ASCII bytes which decode identically under any reasonable encoding
+        if o.isascii():
+            return o.decode("ascii")
+        enc = _detect_encoding(o)
+        if enc is None:
             return str(o)
         try:
-            return o.decode(enc["encoding"])
+            return o.decode(enc)
         except UnicodeDecodeError:
             return str(o)
     else:
