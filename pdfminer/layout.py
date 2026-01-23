@@ -552,7 +552,8 @@ class LTTextLineHorizontal(LTTextLine):
         tolerance: float = 0,
     ) -> bool:
         """Whether the horizontal center of `other` is within `tolerance`."""
-        return abs((other.x0 + other.x1) / 2 - (self.x0 + self.x1) / 2) <= tolerance
+        # Compare sums to avoid dividing by 2 for both centers.
+        return abs((other.x0 + other.x1) - (self.x0 + self.x1)) <= 2 * tolerance
 
     def _is_same_height_as(self, other: LTComponent, tolerance: float = 0) -> bool:
         return abs(other.height - self.height) <= tolerance
